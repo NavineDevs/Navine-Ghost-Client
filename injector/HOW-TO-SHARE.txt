@@ -1,0 +1,19 @@
+Share these unified injector EXEs:
+
+  NavineGhostInjector.exe
+  NavuryxGhostInjector.exe
+
+All go in Downloads\injector output.
+
+  One EXE handles Fabric, Forge/NeoForge, and Vanilla.
+  Loader dropdown:
+    Auto Detect  - picks the right path at inject time
+    Fabric       - force Fabric payload
+    Vanilla / Forge - force vanilla payload + mixin host
+
+  1. Start Minecraft first
+  2. Run the matching brand EXE (as admin if attach fails)
+  3. Pick version + loader (Auto is recommended)
+  4. Press Inject
+  5. Press grave accent key for ClickGUI - .login once for modules
+  6. Logs: %TEMP%\ghost-java-inject.log

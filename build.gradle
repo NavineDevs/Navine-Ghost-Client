@@ -1,0 +1,101 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+version = project.mod_version
+group = project.maven_group
+base {
+    archivesName = 'Navine-Client-Ghost'
+}
+
+repositories {
+    maven { url 'https://maven.terraformersmc.com/releases/' }
+    maven { url 'https://maven.cafeteria.dev/releases/' }
+    maven { url 'https://jitpack.io' }
+    mavenCentral()
+    flatDir {
+        dirs 'libs'
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['com/main/java']
+        }
+        resources {
+            srcDirs = ['.']
+            include 'fabric.mod.json'
+            include 'navine-client.mixins.json'
+            include 'assets/**'
+        }
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    include name: 'java-discord-rpc-2.0.2'
+    implementation name: 'java-discord-rpc-2.0.2'
+    include name: 'discord-rpc-release-v3.4.0'
+    implementation name: 'discord-rpc-release-v3.4.0'
+    include 'net.java.dev.jna:jna:5.15.0'
+    implementation 'net.java.dev.jna:jna:5.15.0'
+    include 'net.dv8tion:JDA:5.1.0'
+    implementation 'net.dv8tion:JDA:5.1.0'
+    include 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    include 'com.squareup.okio:okio:3.6.0'
+    implementation 'com.squareup.okio:okio:3.6.0'
+    include 'com.google.code.gson:gson:2.10.1'
+    implementation 'com.google.code.gson:gson:2.10.1'
+    include 'javazoom:jlayer:1.0.1'
+    implementation 'javazoom:jlayer:1.0.1'
+}
+
+processResources {
+    inputs.property 'version', project.version
+    filteringCharset 'UTF-8'
+
+    filesMatching('fabric.mod.json') {
+        expand 'version': project.version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 25
+}
+
+java {
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    destinationDirectory = layout.buildDirectory.dir('libs')
+    archiveFileName = 'Navine-Client-Ghost.jar'
+}
+
+tasks.register('vanillaClientJar', Jar) {
+    dependsOn classes, processResources
+    destinationDirectory = layout.buildDirectory.dir('libs')
+    archiveFileName = 'Navine-Client-Ghost-vanilla.jar'
+    from sourceSets.main.output
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.register('deploy', Copy) {
+    dependsOn jar
+    from jar.archiveFile
+    into file('C:/Users/hitbo/Downloads/output')
+    doFirst {
+        delete file('C:/Users/hitbo/Downloads/output/Navine-Client-Ghost.jar')
+    }
+}
+
+tasks.named('build') {
+    finalizedBy 'deploy', ':injector:build', 'vanillaClientJar'
+}

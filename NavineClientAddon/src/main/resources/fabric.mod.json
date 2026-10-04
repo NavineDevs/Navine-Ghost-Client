@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "navineclientaddon",
+  "version": "${version}",
+  "name": "Navine Client Addon",
+  "description": "Official example addon with a custom ClickGUI category",
+  "authors": ["Navine Team"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "navine": [
+      "com.navine.clientaddon.NavineClientAddon"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": ">=26.1- <27",
+    "java": ">=25",
+    "fabric-api": "*",
+    "navine-client": "*"
+  }
+}

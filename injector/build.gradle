@@ -1,0 +1,266 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'nv.navineghost'
+version = rootProject.version
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.fabricmc.net/' }
+}
+
+application {
+    mainClass = 'nv.navineghost.injector.GhostInjector'
+}
+
+def launcherDir = layout.projectDirectory
+def outputDir = file('C:/Users/hitbo/Downloads/injector output')
+def nativeOutDir = file('native/out')
+def agentClass = 'nv.navineghost.injector.GhostAgent'
+def unifiedProduct = 'NavineGhostInjector'
+
+dependencies {
+    implementation 'net.fabricmc:sponge-mixin:0.15.4+mixin.0.8.7'
+    implementation 'org.ow2.asm:asm:9.7.1'
+    implementation 'org.ow2.asm:asm-tree:9.7.1'
+    implementation 'org.ow2.asm:asm-commons:9.7.1'
+    implementation 'org.ow2.asm:asm-util:9.7.1'
+    implementation 'org.ow2.asm:asm-analysis:9.7.1'
+}
+
+tasks.register('generateLaunchers') {
+    doLast {
+        def howTo = """Share these unified injector EXEs:
+
+  NavineGhostInjector.exe
+  NavuryxGhostInjector.exe
+
+All go in Downloads\\injector output.
+
+  One EXE handles Fabric, Forge/NeoForge, and Vanilla.
+  Loader dropdown:
+    Auto Detect  - picks the right path at inject time
+    Fabric       - force Fabric payload
+    Vanilla / Forge - force vanilla payload + mixin host
+
+  1. Start Minecraft first
+  2. Run the matching brand EXE (as admin if attach fails)
+  3. Pick version + loader (Auto is recommended)
+  4. Press Inject
+  5. Press grave accent key for ClickGUI - .login once for modules
+  6. Logs: %TEMP%\\ghost-java-inject.log
+"""
+        def startUnified = """@echo off
+setlocal EnableExtensions
+title ${unifiedProduct}
+cd /d "%~dp0"
+set "APP=%~dp0${unifiedProduct}.exe"
+if not exist "%APP%" set "APP=%~dp0native\\out\\${unifiedProduct}.exe"
+if not exist "%APP%" (
+  echo [ERROR] ${unifiedProduct}.exe not found. Build the project first.
+  pause
+  exit /b 1
+)
+start "" "%APP%"
+exit /b 0
+"""
+        launcherDir.file('Start Ghost.bat').asFile.text = startUnified.replace('\n', '\r\n')
+        launcherDir.file('Start Ghost Fabric.bat').asFile.text = startUnified.replace('\n', '\r\n')
+        launcherDir.file('Start Ghost Vanilla.bat').asFile.text = startUnified.replace('\n', '\r\n')
+        launcherDir.file('Navine-Ghost-Client.bat').asFile.text = startUnified.replace('\n', '\r\n')
+        launcherDir.file('HOW-TO-SHARE.txt').asFile.text = howTo.replace('\n', '\r\n')
+    }
+}
+
+tasks.register('buildNativeDll', Exec) {
+    workingDir = file('native')
+    commandLine 'cmd', '/c', 'build_native.bat'
+    inputs.files(
+            file('native/ghost_java_inject.cpp'),
+            file('native/ghost_dll_inject.cpp'),
+            file('native/inject_core.cpp'),
+            file('native/inject_core.h'),
+            file('native/ghost_inject_cli.cpp'),
+            file('native/ghost_gui.cpp'),
+            file('native/build_native.bat')
+    )
+    outputs.files(
+            file("${nativeOutDir}/ghost_java_inject.dll"),
+            file("${nativeOutDir}/ghost-dll-inject.exe"),
+            file("${nativeOutDir}/ghost-inject-cli.exe")
+    )
+}
+
+tasks.named('processResources') {
+    dependsOn rootProject.tasks.named('jar')
+    dependsOn rootProject.tasks.named('vanillaClientJar')
+    dependsOn 'buildNativeDll'
+    from(rootProject.tasks.named('jar')) {
+        into 'embedded'
+        rename { 'navine-ghost-client.jar' }
+    }
+    from(rootProject.tasks.named('vanillaClientJar')) {
+        into 'embedded'
+        rename { 'navine-ghost-client-vanilla.jar' }
+    }
+    from(nativeOutDir) {
+        include 'ghost_java_inject.dll'
+        include 'ghost-dll-inject.exe'
+        into 'native'
+    }
+}
+
+tasks.named('jar') {
+    dependsOn 'generateLaunchers'
+    archiveFileName = 'Navine-Client-Ghost.jar'
+    manifest {
+        attributes(
+                'Main-Class': 'nv.navineghost.injector.GhostInjector',
+                'Premain-Class': 'nv.navineghost.injector.GhostAgent',
+                'Agent-Class': 'nv.navineghost.injector.GhostAgent',
+                'Can-Redefine-Classes': 'true',
+                'Can-Retransform-Classes': 'true'
+        )
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+}
+
+tasks.register('buildGuiNavine', Exec) {
+    dependsOn jar, 'buildNativeDll', rootProject.tasks.named('jar'), rootProject.tasks.named('vanillaClientJar')
+    workingDir = file('native')
+    def product = unifiedProduct
+    doFirst {
+        def agentJar = jar.archiveFile.get().asFile.absolutePath
+        def payloadJar = rootProject.tasks.named('jar').get().archiveFile.get().asFile.absolutePath
+        def vanillaJar = rootProject.tasks.named('vanillaClientJar').get().archiveFile.get().asFile.absolutePath
+        commandLine 'cmd', '/c', "build_native.bat \"${agentJar}\" \"${payloadJar}\" ${product} \"\" \"${vanillaJar}\""
+    }
+    inputs.files(
+            jar.archiveFile,
+            rootProject.tasks.named('jar').map { it.archiveFile },
+            rootProject.tasks.named('vanillaClientJar').map { it.archiveFile },
+            file('native/ghost_gui.cpp'),
+            file('native/inject_core.cpp')
+    )
+    outputs.file(file("${nativeOutDir}/${unifiedProduct}.exe"))
+}
+
+tasks.register('buildGui') {
+    dependsOn 'buildGuiNavine'
+}
+
+tasks.register('deployInjector') {
+    dependsOn 'buildGui', 'generateLaunchers'
+    doLast {
+        if (!outputDir.exists()) {
+            outputDir.mkdirs()
+        }
+        def exe = file("${nativeOutDir}/${unifiedProduct}.exe")
+        if (!exe.exists()) {
+            throw new GradleException("Missing ${unifiedProduct}.exe")
+        }
+        def dest = new File(outputDir, "${unifiedProduct}.exe")
+        try {
+            ant.copy(file: exe, tofile: dest, overwrite: true)
+        } catch (Exception e) {
+            ant.copy(file: exe, tofile: new File(outputDir, unifiedProduct + "-new.exe"), overwrite: true)
+        }
+        def how = launcherDir.file('HOW-TO-SHARE.txt').asFile
+        if (how.exists()) {
+            ant.copy(file: how, tofile: new File(outputDir, 'HOW-TO-SHARE.txt'), overwrite: true)
+        }
+        def agentJar = jar.archiveFile.get().asFile
+        def payloadJar = rootProject.tasks.named('jar').get().archiveFile.get().asFile
+        def vanillaJar = rootProject.tasks.named('vanillaClientJar').get().archiveFile.get().asFile
+        ant.copy(file: agentJar, tofile: new File(outputDir, 'Navine-Injector-Agent.jar'), overwrite: true)
+        ant.copy(file: payloadJar, tofile: new File(outputDir, 'navine-ghost-client.jar'), overwrite: true)
+        ant.copy(file: vanillaJar, tofile: new File(outputDir, 'navine-ghost-client-vanilla.jar'), overwrite: true)
+        ant.copy(file: file("${nativeOutDir}/ghost_java_inject.dll"), tofile: new File(outputDir, 'ghost_java_inject.dll'), overwrite: true)
+        new File(outputDir, 'JARS-README.txt').text = """Navine Ghost Injector files
+
+EXEs:
+  NavineGhostInjector.exe
+
+Agent (Java attach):
+  Navine-Injector-Agent.jar
+
+Client payloads:
+  navine-ghost-client.jar        (Fabric)
+  navine-ghost-client-vanilla.jar (Vanilla/Forge)
+
+Native DLL (manual attach fallback):
+  ghost_java_inject.dll
+
+Logs:
+  %TEMP%\\ghost-native-inject.log
+  %TEMP%\\ghost-java-inject.log
+  %TEMP%\\ghost-attach-out.log
+
+Run injector as Administrator with Minecraft already open.
+"""
+        [
+                'NavineGhostFabricInjector.exe',
+                'NavineGhostVanillaInjector.exe',
+                'NavuryxGhostFabricInjector.exe',
+                'NavuryxGhostVanillaInjector.exe',
+                'NavineGhostClientInjector.exe',
+                'NavineGhostClientInjector.zip'
+        ].each { old ->
+            def f = new File(outputDir, old)
+            if (f.exists()) {
+                f.delete()
+            }
+        }
+    }
+}
+
+tasks.register('exportElectronResources') {
+    dependsOn jar, 'buildNativeDll', rootProject.tasks.named('jar'), rootProject.tasks.named('vanillaClientJar')
+    doLast {
+        def dir = file('electron/resources')
+        dir.mkdirs()
+        copy {
+            from jar.archiveFile
+            into dir
+            rename { 'agent.jar' }
+        }
+        copy {
+            from rootProject.tasks.named('jar').get().archiveFile
+            into dir
+            rename { 'payload.jar' }
+        }
+        copy {
+            from rootProject.tasks.named('vanillaClientJar').get().archiveFile
+            into dir
+            rename { 'payload-vanilla.jar' }
+        }
+        copy {
+            from nativeOutDir
+            include 'ghost_java_inject.dll', 'ghost-inject-cli.exe'
+            into dir
+        }
+    }
+}
+
+tasks.register('deployInjectorOutput') {
+    dependsOn 'deployInjector'
+}
+
+tasks.named('build') {
+    finalizedBy 'deployInjector'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}

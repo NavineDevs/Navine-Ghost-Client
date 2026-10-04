@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "example-navine-addon",
+  "version": "${version}",
+  "name": "Navine Example",
+  "description": "Example addon for Navine Client (no bypass features)",
+  "authors": ["Navine Team"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "navine": [
+      "com.example.navineaddon.NavineExampleAddon"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": ">=26.1- <27",
+    "java": ">=25",
+    "fabric-api": "*",
+    "navine-client": "*"
+  }
+}

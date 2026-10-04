@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "navine-ghost",
+  "version": "${version}",
+  "name": "Navine-Ghost-Client",
+  "description": "Ghost injectable utility client. Best with Fabric; injector attaches to any Minecraft JVM.",
+  "authors": [
+    "Navine Team"
+  ],
+  "contact": {
+    "homepage": "https://navine-client.com/",
+    "sources": "https://github.com/navinedevs/navine-client"
+  },
+  "license": "MIT",
+  "icon": "assets/navine/icon.png",
+  "environment": "client",
+  "mixins": [
+    "navine-client.mixins.json"
+  ],
+  "entrypoints": {
+    "client": [
+      "nv.navineclient.FabricNavineEntry"
+    ]
+  },
+  "depends": {
+    "fabricloader": "*",
+    "minecraft": "*",
+    "java": ">=17"
+  },
+  "suggests": {
+    "fabric-api": "*"
+  }
+}

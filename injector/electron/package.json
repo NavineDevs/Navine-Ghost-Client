@@ -1,0 +1,59 @@
+{
+  "name": "navine-ghost-client-injector",
+  "version": "1.2.2",
+  "private": true,
+  "main": "main.js",
+  "description": "Navine Minecraft Fabric utility injector",
+  "author": "Navine",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --win portable dir --x64"
+  },
+  "build": {
+    "appId": "com.navine.ghostclient.injector",
+    "productName": "NavineGhostClientInjector",
+    "copyright": "Copyright Navine",
+    "directories": {
+      "output": "dist"
+    },
+    "asar": true,
+    "compression": "normal",
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "styles.css"
+    ],
+    "extraResources": [
+      {
+        "from": "resources",
+        "to": "resources",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        },
+        {
+          "target": "dir",
+          "arch": ["x64"]
+        }
+      ],
+      "requestedExecutionLevel": "asInvoker",
+      "signAndEditExecutable": true,
+      "artifactName": "${productName}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^37.2.0",
+    "electron-builder": "^26.0.12"
+  }
+}
